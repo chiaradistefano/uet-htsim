@@ -312,20 +312,15 @@ void RoceSrc::send_packet() {
         // Parse the nodename
         string nodename = p->route()->at(0)->nodename();
         string parsed_nodename;
-        bool write=false;
-        for(char c: nodename){
-            if(c==')'){
-                write=true;
+        bool write = false;
+        for(char c : nodename) {
+            if(!write) {
+                if(c == ')') write = true;
                 continue;
             }
-            if(c=='(' && write){
-                break;
-            }
-            if(write){
-                parsed_nodename+=c;
-            }
+            parsed_nodename += c;
         }
-        
+ 
         new LoggedPacket(parsed_nodename,std::to_string(timeAsUs(eventlist().now())),std::to_string(p->size()), std::to_string(drainTime(p)));
     }
 
@@ -495,18 +490,13 @@ void RoceSink::send_ack(simtime_picosec ts) {
         // Parse the nodename
         string nodename = ack->route()->at(0)->nodename();
         string parsed_nodename;
-        bool write=false;
-        for(char c: nodename){
-            if(c==')'){
-                write=true;
+        bool write = false;
+        for(char c : nodename) {
+            if(!write) {
+                if(c == ')') write = true;
                 continue;
             }
-            if(c=='(' && write){
-                break;
-            }
-            if(write){
-                parsed_nodename+=c;
-            }
+            parsed_nodename += c;
         }
 
         new LoggedPacket(parsed_nodename,std::to_string(timeAsUs(EventList::getTheEventList().now())),std::to_string(ack->size()), std::to_string(ack->size()*get_ps_per_byte()));
@@ -530,18 +520,13 @@ void RoceSink::send_nack(simtime_picosec ts, RocePacket::seq_t ackno) {
         // Parse the nodename
         string nodename = nack->route()->at(0)->nodename();
         string parsed_nodename;
-        bool write=false;
-        for(char c: nodename){
-            if(c==')'){
-                write=true;
+        bool write = false;
+        for(char c : nodename) {
+            if(!write) {
+                if(c == ')') write = true;
                 continue;
             }
-            if(c=='(' && write){
-                break;
-            }
-            if(write){
-                parsed_nodename+=c;
-            }
+            parsed_nodename += c;
         }
 
         new LoggedPacket(parsed_nodename,std::to_string(timeAsUs(EventList::getTheEventList().now())),std::to_string(nack->size()), std::to_string(nack->size()*get_ps_per_byte()));

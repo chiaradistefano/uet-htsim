@@ -21,7 +21,7 @@ The topology is fully determined by four structural parameters:
 
 ### 1.2 Topology Size Variants
 
-The number of groups and total hosts depend on the topology size variant selected via ``-size s\|m\|l``.
+The number of groups and total hosts depend on the topology size variant selected via ``-size s|m|l``.
 
 | Variant | Groups | Max hosts | Meaning |
 |---------|--------|-----------|---------|

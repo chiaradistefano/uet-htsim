@@ -17,11 +17,11 @@ The topology is fully determined by four structural parameters:
 | `k` | *(derived)* | Router radix `k = s + p = h + l`. |
 | `a` | *(derived)* | Total switches per group: `a = s + l`. |
 
-> **Load-balance constraint:** the parameters `p`, `s`, `l`, `h` must either all be set or none of them set. If none are set, the simulator automatically derives them as `p = s = l = h = k/2` (perfectly balanced traffic configuration), selecting the smallest `k` that satisfies the number of requested nodes.
+> **Load-balance:** the parameters `p`, `s`, `l`, `h` must either all be set or none of them set. If none are set, the simulator automatically derives them as `p = s = l = h = k/2` (perfectly balanced traffic configuration), selecting the smallest `k` that satisfies the number of requested nodes.
 
 ### 1.2 Topology Size Variants
 
-The number of groups and total hosts depend on the topology size variant selected via `-size s\|m\|l`.
+The number of groups and total hosts depend on the topology size variant selected via ``-size s\|m\|l``.
 
 | Variant | Groups | Max hosts | Meaning |
 |---------|--------|-----------|---------|

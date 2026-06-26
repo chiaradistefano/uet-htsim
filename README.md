@@ -7,6 +7,11 @@ This repository is a fork of the official UEC repository, with the following fea
 - Packet logging and per-port statistics (developer: [Chiara Di Stefano](https://github.com/chiaradistefano) and [Simone Lidonnici](https://github.com/SimoneLid))
 - Fixes on the validation tests suite and other bug fixes (developer: [Matthew Fernandez](https://github.com/matt-dbs))
 
+## Documentation
+To learn how to use these newly features, please refer to the guides below:
+- **[General Features Usage Guide](htsim/sim/datacenter/utils/README_imp.md)**: A comprehensive guide on how to use new implementations.
+- **[Dragonfly+ Topology Guide](htsim/sim/datacenter/utils/README_dfp.md)**: Detailed documentation specifically for setting up and using the Dragonfly+ topology.
+
 The following features will be added in the next weeks:
 - Dynamic traffic visualization tools
 - Additional routing/load balancing algorithms

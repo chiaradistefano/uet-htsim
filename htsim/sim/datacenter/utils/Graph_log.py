@@ -2,37 +2,37 @@ import matplotlib.pyplot as plt
 import math
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
-def genera_grafico_multi(dim_pacchetti, tempi_list, labels=None):
+def gen_multi_plot(packet_size, times_list, labels=None):
     """
     Main linear graph with an inset zoom for small message sizes.
     """
 
     epsilon = 1e-3
 
-    for tempi in tempi_list:
-        if len(tempi) != len(dim_pacchetti):
+    for time in times_list:
+        if len(time) != len(packet_size):
             raise ValueError("Each time list must have the same length as the packet size list.")
 
     if labels is None:
-        labels = [f"Serie {i+1}" for i in range(len(tempi_list))]
+        labels = [f"Serie {i+1}" for i in range(len(times_list))]
 
     fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True)
 
     # -------------------------
     # Main graph
     # -------------------------
-    for tempi, label in zip(tempi_list, labels):
-        ax.plot(dim_pacchetti, tempi, marker='o', label=label)
+    for time, label in zip(times_list, labels):
+        ax.plot(packet_size, time, marker='o', label=label)
 
     ax.set_title("Plot AllGather Ring")
-    ax.set_xlabel("Dimensione Vettore")
-    ax.set_ylabel("Tempo (ms)")
+    ax.set_xlabel("Vector Size")
+    ax.set_ylabel("Time (ms)")
 
     ax.set_xscale("log", base=2)
     ax.grid(True, which="both", linestyle="--", alpha=0.7)
 
-    labels_readable = [human_readable_size(x) for x in dim_pacchetti]
-    ax.set_xticks(dim_pacchetti)
+    labels_readable = [human_readable_size(x) for x in packet_size]
+    ax.set_xticks(packet_size)
     ax.set_xticklabels(labels_readable, rotation=45)
 
     ax.legend(loc='upper left')
@@ -52,15 +52,15 @@ def genera_grafico_multi(dim_pacchetti, tempi_list, labels=None):
 
     epsilon_zoom = 100   # fake zero value used for zoom visualization
 
-    for tempi, _label in zip(tempi_list, labels):
-        tempi_safe = [t if t > 0 else epsilon_zoom for t in tempi]
-        axins.plot(dim_pacchetti, tempi_safe, marker='o')
+    for time, _label in zip(times_list, labels):
+        time_safe = [t if t > 0 else epsilon_zoom for t in time]
+        axins.plot(packet_size, time_safe, marker='o')
 
     axins.set_xscale("log", base=2)
     axins.set_yscale("log", base=10)
 
     # Zoom up to 8 MiB
-    x_zoom = dim_pacchetti[:8]
+    x_zoom = packet_size[:8]
     axins.set_xlim(x_zoom[0] * 0.8, x_zoom[-1] * 1.2)
 
     # Y-axis range for the zoomed inset
@@ -81,8 +81,8 @@ def genera_grafico_multi(dim_pacchetti, tempi_list, labels=None):
 
     mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
 
-    plt.savefig("grafico_multi_misto.png", dpi=300, bbox_inches="tight")
-    print("Graph saved as grafico_multi_misto.png")
+    plt.savefig("multi_plot_mix.png", dpi=300, bbox_inches="tight")
+    print("Graph saved as multi_plot_mix.png")
 
 
 def human_readable_size(size_bytes):
@@ -107,16 +107,16 @@ def human_readable_size(size_bytes):
 # Example usage
 # ------------------------
 if __name__ == "__main__":
-    dim_pacchetti = [4, 32, 256, 2*1024, 16*1024, 128*1024, 1*1024*1024, 8*1024*1024, 64*1024*1024, 512*1024*1024]
+    packet_size = [4, 32, 256, 2*1024, 16*1024, 128*1024, 1*1024*1024, 8*1024*1024, 64*1024*1024, 512*1024*1024]
 
-    tempi1 = [0.0, 0.0, 671.51, 671.889, 675.05, 699.36, 827.642, 1440.57, 6198.85, 44214.7]
-    tempi2 = [0.0, 0.0, 479.628, 479.802, 481.218, 492.644, 602.679, 1207.75, 6445.98, 49133.7]
-    tempi3 = [0.0, 0.0, 540.569, 540.631, 541.121, 545.046, 631.468, 1225.81, 5969.1, 43981.0]
-    tempi4 = [0.0, 0.0, 524.45, 524.498, 524.886, 527.986, 612.093, 1205.6, 5949.22, 43960.6]
-    tempi5 = [0.0, 0.0, 542.168, 542.402, 544.27, 559.215, 611.631, 727.716, 5617.95, 44567.6]
+    time1 = [0.0, 0.0, 671.51, 671.889, 675.05, 699.36, 827.642, 1440.57, 6198.85, 44214.7]
+    time2 = [0.0, 0.0, 479.628, 479.802, 481.218, 492.644, 602.679, 1207.75, 6445.98, 49133.7]
+    time3 = [0.0, 0.0, 540.569, 540.631, 541.121, 545.046, 631.468, 1225.81, 5969.1, 43981.0]
+    time4 = [0.0, 0.0, 524.45, 524.498, 524.886, 527.986, 612.093, 1205.6, 5949.22, 43960.6]
+    time5 = [0.0, 0.0, 542.168, 542.402, 544.27, 559.215, 611.631, 727.716, 5617.95, 44567.6]
 
-    genera_grafico_multi(
-        dim_pacchetti,
-        [tempi1, tempi2, tempi3, tempi4, tempi5],
+    gen_multi_plot(
+        packet_size,
+        [time1, time2, time3, time4, time5],
         labels=["Fat Tree", "Multi Gpu", "Scale Up 32 Porte", "Scale Up 64 Porte", "Scale Up Multi Planes"]
     )

@@ -21,53 +21,68 @@ def pi(rank, step, conns):
     return dst
 
 
+def create_connection(conns, flowsize, array_nodes, id, trig_id):
+
+    lines = []
+    for n in range(0,conns):
+        src=n
+        level = 0
+        for step in reversed(range(int(math.log2(conns)))):
+            id+=1
+
+            dst = pi(src,step,conns)
+
+            out = str(array_nodes[src]) + "->" + str(array_nodes[dst]) + " id " + str(id)
+
+            if step == int(math.log2(conns)) - 1:
+                out = out + " start 0"
+            else:
+                out = out + " trigger " + str(trig_id)
+                trig_id += 1
+
+            out = out + " size " + str(flowsize)
+
+            if level != int(math.log2(conns))-1:
+                out = out + " send_done_trigger " + str(trig_id)
+            lines.append(out)
+            src = dst
+            level += 1
+
+    return lines, id, trig_id
+
+def main():
+    if len(sys.argv) != 5:
+        print("Usage: python gen_allreduce_bine.py <filename> <nodes> <conns> <flowsize>")
+        sys.exit()
+    filename = sys.argv[1]
+    nodes = int(sys.argv[2])
+    conns = int(sys.argv[3])
+    flowsize = int(sys.argv[4])
+
+    array_nodes = list(range(conns))
+    id = 0
+    trig_id = 1
 
 
-if len(sys.argv) != 5:
-    print("Usage: python gen_allreduce_bine.py <filename> <nodes> <conns> <flowsize>")
-    sys.exit()
-filename = sys.argv[1]
-nodes = int(sys.argv[2])
-conns = int(sys.argv[3])
-flowsize = int(sys.argv[4])
+    print("Connections: ", conns)
+    print("Flowsize: ", flowsize, "bytes")
+
+    lines, _, final_trig_id = create_connection(conns, flowsize, array_nodes, id, trig_id)
+
+    num_flows = len(lines)
 
 
-print("Connections: ", conns)
-print("Flowsize: ", flowsize, "bytes")
+    for t in range(trig_id, final_trig_id):
+        out = "trigger id " + str(t) + " oneshot"
+        lines.append(out)
 
-f = open(filename, "w")
-print("Nodes", nodes, file=f)
-print("Connections", conns*math.floor(math.log2(conns)), file=f)
-print("Triggers", conns*(math.floor(math.log2(conns))-1), file=f)
+    with open(filename, "w") as f:
+        print(f"Nodes", nodes, file=f)
+        print(f"Connections", num_flows, file=f) 
+        print(f"Triggers", final_trig_id - 1, file=f)  
+        
+        for line in lines:
+            print(line, file=f)
 
-id = 0
-trig_id = 1
-for n in range(0,conns):
-    src=n
-    level = 0
-    for step in reversed(range(int(math.log2(conns)))):
-        id+=1
-
-        dst = pi(src,step,conns)
-
-        out = str(src) + "->" + str(dst) + " id " + str(id)
-
-        if step == int(math.log2(conns)) - 1:
-            out = out + " start 0"
-        else:
-            out = out + " trigger " + str(trig_id)
-            trig_id += 1
-
-        out = out + " size " + str(flowsize)
-
-        if level != int(math.log2(conns))-1:
-            out = out + " send_done_trigger " + str(trig_id)
-        print(out, file=f)
-        src = dst
-        level += 1
-
-for t in range(1, trig_id):
-    out = "trigger id " + str(t) + " oneshot"
-    print(out, file=f)
-
-f.close()
+if __name__ == "__main__":
+    main()

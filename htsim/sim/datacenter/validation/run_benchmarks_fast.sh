@@ -6,7 +6,7 @@ LINK_SPEED=100000
 PATHS=16
 # 100ms (100.000.000 ns) 
 END_TIME=100000000
-OUT_DIR="results/confronto_finale/tmp"
+OUT_DIR="results/final_comparison/tmp"
 mkdir -p $OUT_DIR
 
 # Array that contains all the dimension to test
@@ -22,8 +22,8 @@ for i in "${!SIZES[@]}"; do
     echo "==========================================="
 
     # 1. Matrix Generation
-    python3 ../connection_matrices/gen_allreduce_bine.py $OUT_DIR/host_${LABEL}.cm $NODES $NODES $SIZE 42
-    python3 ../connection_matrices/gen_allreduce_ina.py $OUT_DIR/ina_${LABEL}.cm $NODES $NODES $SIZE 42
+    python3 ../connection_matrices/gen_allreduce_bine.py $OUT_DIR/host_${LABEL}.cm $NODES $NODES $SIZE
+    python3 ../connection_matrices/gen_allreduce_ina.py $OUT_DIR/ina_${LABEL}.cm $NODES $NODES $SIZE
 
     # 2. Host-based execution with GREP filtering
     echo "Running Host-based..."
@@ -33,7 +33,7 @@ for i in "${!SIZES[@]}"; do
 
     # 3. INA execution with GREP filtering
     echo "Running In-Network..."
-    ../htsim_uec -tm $OUT_DIR/ina_${LABEL}.cm -sender_cc_only -end $END_TIME \
+    ../htsim_inc_uec -tm $OUT_DIR/ina_${LABEL}.cm -sender_cc_only -end $END_TIME \
     -linkspeed $LINK_SPEED -paths $PATHS -debug 2>&1 \
     | grep -E "Finished at|starting|Nodes|Connections|Done|New:|flowId" > $OUT_DIR/ina_${LABEL}.out
 

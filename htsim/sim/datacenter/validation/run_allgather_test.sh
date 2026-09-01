@@ -31,10 +31,10 @@ for i in "${!SIZES[@]}"; do
     echo "==========================================="
 
     # 1. Generation Matrix All-Gather Host-based (BINE)
-    python3 ../connection_matrices/gen_allgather_bine.py $OUT_DIR/allgather_host_${LABEL}.cm $NODES $CONNS $SIZE 42
+    python3 ../connection_matrices/gen_allgather_bine.py $OUT_DIR/allgather_host_${LABEL}.cm $NODES $CONNS $SIZE
     
     # [OP] - If you also have the In-Network generator for All-Gather, uncomment here:
-    # python3 ../connection_matrices/gen_allgather_ina.py $OUT_DIR/allgather_ina_${LABEL}.cm $NODES $CONNS $SIZE 42
+    # python3 ../connection_matrices/gen_allgather_ina.py $OUT_DIR/allgather_ina_${LABEL}.cm $NODES $CONNS $SIZE
 
     # 2. Host-based execution with GREP filtering
     echo "Running Host-based All-Gather..."

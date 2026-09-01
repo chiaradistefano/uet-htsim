@@ -8,56 +8,68 @@
 import sys
 import math
 
-if len(sys.argv) != 5:
-    print("Usage: python gen_reducesctter_pairwise.py <filename> <nodes> <conns> <flowsize>")
-    sys.exit()
-filename = sys.argv[1]
-nodes = int(sys.argv[2])
-conns = int(sys.argv[3])
-flowsize = int(sys.argv[4])
+def create_connection(conns, flowsize, array_nodes, id, trig_id):
 
-power_2=False
-if conns > 0 and (conns & (conns - 1)) == 0:
-    power_2=True
+    lines = []
+    for n in range(0,conns):
+        src=n
+        for step in range(conns-1):
+            id+=1
 
-print("Connections: ", conns)
-print("Flowsize: ", flowsize, "bytes")
+            dst=(src+step+1)%conns
 
-f = open(filename, "w")
-print("Nodes", nodes, file=f)
+            out = str(array_nodes[src]) + "->" + str(array_nodes[dst]) + " id " + str(id)
 
-print("Connections", conns*(conns-1), file=f)
-print("Triggers", conns*(conns-2), file=f)
+            if step == 0:
+                out = out + " start 0"
+            else:
+                out = out + " trigger " + str(trig_id)
+                trig_id += 1
+            
+            out = out + " size " + str(int(flowsize/conns))
 
-id = 0
-trig_id = 1
-for n in range(0,conns):
-    src=n
-    for step in range(conns-1):
-        id+=1
+            if step != conns-2:
+                out = out + " send_done_trigger " + str(trig_id)
 
-        dst=(src+step+1)%conns
+            src = dst
+            lines.append(out)
 
-        out = str(src) + "->" + str(dst) + " id " + str(id)
+    return lines, id, trig_id
 
-        if step == 0:
-            out = out + " start 0"
-        else:
-            out = out + " trigger " + str(trig_id)
-            trig_id += 1
+def main():
+    if len(sys.argv) != 5:
+        print("Usage: python gen_reducesctter_pairwise.py <filename> <nodes> <conns> <flowsize>")
+        sys.exit()
+    filename = sys.argv[1]
+    nodes = int(sys.argv[2])
+    conns = int(sys.argv[3])
+    flowsize = int(sys.argv[4])
+
+    array_nodes = list(range(conns))
+    id = 0
+    trig_id = 1
+
+
+    print("Connections: ", conns)
+    print("Flowsize: ", flowsize, "bytes")
+
+    lines, _, final_trig_id = create_connection(conns, flowsize, array_nodes, id, trig_id)
+
+    num_flows = len(lines)
+
+
+    for t in range(trig_id, final_trig_id):
+        out = "trigger id " + str(t) + " oneshot"
+        lines.append(out)
+
+    with open(filename, "w") as f:
+        print(f"Nodes", nodes, file=f)
+        print(f"Connections", num_flows, file=f) 
+        print(f"Triggers", final_trig_id - 1, file=f)  
         
-        out = out + " size " + str(int(flowsize/conns))
+        for line in lines:
+            print(line, file=f)
 
-        if step != conns-2:
-            out = out + " send_done_trigger " + str(trig_id)
-
-        src = dst
-
-        print(out, file=f)
-
-for t in range(1, trig_id):
-    out = "trigger id " + str(t) + " oneshot"
-    print(out, file=f)
-
-f.close()
+if __name__ == "__main__":
+    main()
 

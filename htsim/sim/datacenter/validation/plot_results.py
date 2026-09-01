@@ -6,7 +6,7 @@ import numpy as np
 # =========================================================
 # 1. CONFIGURATION
 # =========================================================
-OUT_DIR = "results/confronto_finale/tmp"
+OUT_DIR = "results/final_comparison/tmp"
 
 # New dimensions: from 4 Bytes to 256 MiB (multiplying by 4)
 SIZES_BYTES = [4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 16777216, 67108864, 268435456]

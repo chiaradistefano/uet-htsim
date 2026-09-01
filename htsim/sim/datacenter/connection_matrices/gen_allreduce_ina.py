@@ -28,4 +28,3 @@ with open(filename, "w") as f:
         out = f"{src}-># id {flow_id} start 0 size {flowsize}"
         print(out, file=f)
         
-        # print(f"{src} -> #")

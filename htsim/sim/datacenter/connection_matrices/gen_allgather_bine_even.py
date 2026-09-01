@@ -1,5 +1,6 @@
 # Generate a bine allgather traffic matrix.
-# python gen_allgather_bine.py <filename> <nodes> <conns> <flowsize>
+# python gen_allgather_bine_even.py <filename> <nodes> <conns> <flowsize>
+#
 # Parameters:
 # <nodes>   number of nodes in the topology
 # <conns>    number of active connections
@@ -80,92 +81,98 @@ def clz32(n):
         return 32
     return 32 - n.bit_length()
 
+def create_connection(conns, flowsize, array_nodes, id, trig_id):
 
-if len(sys.argv) != 5:
-    print("Usage: python gen_allgather_bine.py <filename> <nodes> <conns> <flowsize>")
-    sys.exit()
-filename = sys.argv[1]
-nodes = int(sys.argv[2])
-conns = int(sys.argv[3])
-flowsize = int(sys.argv[4])
+    lines = []
 
+    for n in range(0,conns):
+        src = n
+        step = 0
+        for mask in reversed(range(math.ceil(math.log2(conns)))):
 
-print("Connections: ", conns)
-print("Flowsize: ", flowsize, "bytes")
+            dst = pi(src, mask, conns)
 
-lines_to_write = []
+            to_write_last_step = []
 
-id = 0
-trig_id = 1
-num_conn = 0
+            for block in range(1, conns):
 
-for n in range(0,conns):
-    src = n
-    step = 0
-    for mask in reversed(range(math.ceil(math.log2(conns)))):
+                k = 31 - clz32(get_nu(block, conns))
 
-        dst = pi(src, mask, conns)
-
-        to_write_last_step = []
-
-        for block in range(1, conns):
-
-            k = 31 - clz32(get_nu(block, conns))
-
-            if (k == step or block == 0):
-                if (src % 2 == 0):
-                    block_to_send = (dst - block) % conns
-                else:
-                    block_to_send = (block + dst) % conns
-
-                
-                if (block_to_send != dst):
-                    id+=1
-
-                    out = str(src) + "->" + str(dst) + " id " + str(id)
-
-                    if step == 0:
-                        out = out + " start 0 size " + str(int(flowsize/conns))
+                if (k == step or block == 0):
+                    if (src % 2 == 0):
+                        block_to_send = (dst - block) % conns
                     else:
+                        block_to_send = (block + dst) % conns
+
+                    
+                    if (block_to_send != dst):
+                        id+=1
+
+                        out = str(array_nodes[src]) + "->" + str(array_nodes[dst]) + " id " + str(id)
+
+                        if step == 0:
+                            out = out + " start 0 size " + str(int(flowsize/conns))
+                        else:
+                            if step != math.ceil(math.log2(conns))-1:
+                                out = out + " trigger " + str(trig_id)
+                                trig_id += 1
+
+                                out = out + " size " + str(int(flowsize/conns))
+
                         if step != math.ceil(math.log2(conns))-1:
-                            out = out + " trigger " + str(trig_id)
-                            trig_id += 1
+                            out = out + " send_done_trigger " + str(trig_id)
+                            num_conn += 1
+                            lines.append(out)
+                        else: 
+                            to_write_last_step.append(out)
 
-                            out = out + " size " + str(int(flowsize/conns))
+            step += 1
+            src = dst
+        
+        # to append all the last blocks
+        if to_write_last_step:
+            for i, out in enumerate(to_write_last_step):
+                out = out + " trigger " + str(trig_id) + " size " + str(int(flowsize/conns))
+                trig_id += 1
+                if i != len(to_write_last_step) - 1:
+                    out = out + " send_done_trigger " + str(trig_id)
+                num_conn += 1
+                lines.append(out)
+    return lines, id, trig_id
 
-                    if step != math.ceil(math.log2(conns))-1:
-                        out = out + " send_done_trigger " + str(trig_id)
-                        num_conn += 1
-                        lines_to_write.append(out)
-                    else: 
-                        to_write_last_step.append(out)
+def main():
+    if len(sys.argv) != 5:
+        print("Usage: python gen_allgather_bine_even.py <filename> <nodes> <conns> <flowsize>")
+        sys.exit()
+    filename = sys.argv[1]
+    nodes = int(sys.argv[2])
+    conns = int(sys.argv[3])
+    flowsize = int(sys.argv[4])
 
-        step += 1
-        src = dst
-    
-    # to append all the last blocks
-    if to_write_last_step:
-        for i, out in enumerate(to_write_last_step):
-            out = out + " trigger " + str(trig_id) + " size " + str(int(flowsize/conns))
-            trig_id += 1
-            if i != len(to_write_last_step) - 1:
-                out = out + " send_done_trigger " + str(trig_id)
-            num_conn += 1
-            lines_to_write.append(out)
+    array_nodes = list(range(conns))
+    id = 0
+    trig_id = 1
 
+    print("Connections: ", conns)
+    print("Flowsize: ", flowsize, "bytes")
 
+    lines, _, final_trig_id = create_connection(conns, flowsize, array_nodes, id, trig_id)
 
-for t in range(1, trig_id):
-    out = "trigger id " + str(t) + " oneshot"
-    lines_to_write.append(out)
+    num_flows = len(lines)
 
-with open(filename, "w") as f:
-    print(f"Nodes", nodes, file=f)
-    print(f"Connections", num_conn, file=f) 
-    print(f"Triggers", trig_id - 1, file=f)  
-    
-    for line in lines_to_write:
-        print(line, file=f)
+    for t in range(trig_id, final_trig_id):
+        out = "trigger id " + str(t) + " oneshot"
+        lines.append(out)
 
+    with open(filename, "w") as f:
+        print(f"Nodes", nodes, file=f)
+        print(f"Connections", num_flows, file=f) 
+        print(f"Triggers", final_trig_id - 1, file=f)  
+        
+        for line in lines:
+            print(line, file=f)
+
+if __name__ == "__main__":
+    main()
 
 

@@ -14,3 +14,16 @@ idmap.txt
 *.png
 !example_validate.json
 build/
+*.txt
+.venv/
+**/.venv/
+
+# Compiled executables
+LogGOPSim
+txt2bin
+
+# Binary output files
+*.bin
+
+# Goal trace files
+*.goal

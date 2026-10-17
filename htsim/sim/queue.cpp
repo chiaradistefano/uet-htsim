@@ -45,6 +45,31 @@ BaseQueue::log_packet_send(simtime_picosec duration){
     }
 }
 
+// port name used in packets.csv: the node name without the leading
+// "queue(...)" part, i.e. everything after the first ')'
+static string parse_port_name(const string& nodename) {
+    size_t pos = nodename.find(')');
+    if (pos == string::npos)
+        return "";
+    return nodename.substr(pos + 1);
+}
+
+void
+BaseQueue::log_packet_departure(Packet* pkt){
+    // the port is the first hop of the packet's current route (with switch
+    // based forwarding this is the queue itself, so its name is cached)
+    PacketSink* port = pkt->route()->at(0);
+    if (port == this) {
+        if (!_log_port_name_valid) {
+            _log_port_name = parse_port_name(nodename());
+            _log_port_name_valid = true;
+        }
+        PacketManager::log_packet(_log_port_name, timeAsUs(eventlist().now()), pkt->size(), drainTime(pkt));
+    } else {
+        PacketManager::log_packet(parse_port_name(port->nodename()), timeAsUs(eventlist().now()), pkt->size(), drainTime(pkt));
+    }
+}
+
 uint16_t
 BaseQueue::average_utilization(){
     //how much time have we spent being busy in the current measurement window?
@@ -148,19 +173,7 @@ Queue::completeService()
     pkt->flow().logTraffic(*pkt, *this, TrafficLogger::PKT_DEPART);
 
     if (_log_packet_enabled){
-        // Parse the nodename
-        string nodename = pkt->route()->at(0)->nodename();
-        string parsed_nodename;
-        bool write = false;
-        for(char c : nodename) {
-            if(!write) {
-                if(c == ')') write = true;
-                continue;
-            }
-            parsed_nodename += c;
-        }
-
-        new LoggedPacket(parsed_nodename,std::to_string(timeAsUs(eventlist().now())),std::to_string(pkt->size()), std::to_string(drainTime(pkt)));
+        log_packet_departure(pkt);
     }
 
     if (_logger) _logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);
@@ -362,19 +375,7 @@ PriorityQueue::completeService()
         pkt->flow().logTraffic(*pkt, *this, TrafficLogger::PKT_DEPART);
 
         if (_log_packet_enabled){
-            // Parse the nodename
-            string nodename = pkt->route()->at(0)->nodename();
-            string parsed_nodename;
-            bool write = false;
-            for(char c : nodename) {
-                if(!write) {
-                    if(c == ')') write = true;
-                    continue;
-                }
-                parsed_nodename += c;
-            }
-
-            new LoggedPacket(parsed_nodename,std::to_string(timeAsUs(eventlist().now())),std::to_string(pkt->size()), std::to_string(drainTime(pkt)));
+            log_packet_departure(pkt);
         }
 
         if (_logger) _logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);
@@ -566,19 +567,7 @@ FairPriorityQueue::completeService()
         pkt->flow().logTraffic(*pkt, *this, TrafficLogger::PKT_DEPART);
 
         if (_log_packet_enabled){
-            // Parse the nodename
-            string nodename = pkt->route()->at(0)->nodename();
-            string parsed_nodename;
-            bool write = false;
-            for(char c : nodename) {
-                if(!write) {
-                    if(c == ')') write = true;
-                    continue;
-                }
-                parsed_nodename += c;
-            }
-
-            new LoggedPacket(parsed_nodename,std::to_string(timeAsUs(eventlist().now())),std::to_string(pkt->size()), std::to_string(drainTime(pkt)));
+            log_packet_departure(pkt);
         }
 
         if (_logger) _logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);

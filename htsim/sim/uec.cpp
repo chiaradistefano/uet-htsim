@@ -36,6 +36,7 @@ uint16_t UecSink::_mtus_per_pull = 4;
 UecBasePacket::pull_quanta UecSink::_credit_per_pull = (UecSrc::_mss * UecSink::_mtus_per_pull) >> UEC_PULL_SHIFT;
 
 bool UecSrc::_debug = false;
+bool UecSrc::_verbose = false;
 
 bool UecSrc::_sender_based_cc = false;
 bool UecSrc::_receiver_based_cc = false;
@@ -172,15 +173,17 @@ void UecSrc::initNscc(mem_b cwnd, simtime_picosec peer_rtt) {
         _cwnd = cwnd;
     }
 
-    cout << "Initialize per-instance NSCC parameters:"
-        << " flowid " << _flow.flow_id()
-        << " _base_rtt=" << _base_rtt
-        << " _base_bdp=" << _base_bdp
-        << " _bdp=" << _bdp
-        << " _min_cwnd=" << _min_cwnd
-        << " _maxwnd=" << _maxwnd
-        << " _cwnd=" << _cwnd
-        << endl;
+    if (_verbose) {
+        cout << "Initialize per-instance NSCC parameters:"
+            << " flowid " << _flow.flow_id()
+            << " _base_rtt=" << _base_rtt
+            << " _base_bdp=" << _base_bdp
+            << " _bdp=" << _bdp
+            << " _min_cwnd=" << _min_cwnd
+            << " _maxwnd=" << _maxwnd
+            << " _cwnd=" << _cwnd
+            << endl;
+    }
 }
 
 void UecSrc::initRccc(mem_b cwnd, simtime_picosec peer_rtt) {
@@ -198,14 +201,16 @@ void UecSrc::initRccc(mem_b cwnd, simtime_picosec peer_rtt) {
         _cwnd = cwnd;
     }
 
-    cout << "Initialize per-instance RCCC parameters:"
-        << " flowid " << _flow.flow_id()
-        << " _base_rtt=" << _base_rtt
-        << " _base_bdp=" << _base_bdp
-        << " _bdp=" << _bdp
-        << " _maxwnd=" << _maxwnd
-        << " _cwnd=" << _cwnd
-        << endl;
+    if (_verbose) {
+        cout << "Initialize per-instance RCCC parameters:"
+            << " flowid " << _flow.flow_id()
+            << " _base_rtt=" << _base_rtt
+            << " _base_bdp=" << _base_bdp
+            << " _bdp=" << _bdp
+            << " _maxwnd=" << _maxwnd
+            << " _cwnd=" << _cwnd
+            << endl;
+    }
 }
 
 
@@ -2498,7 +2503,6 @@ UecSink::UecSink(TrafficLogger* trafficLogger, UecPullPacer* pullPacer, UecNIC& 
       _recvd_bytes(0),
       _rcv_cwnd_pen(255),
       _end_trigger(NULL),
-      _epsn_rx_bitmap(0),
       _out_of_order_count(0),
       _ack_request(false),
       _entropy(0)  {
@@ -2538,7 +2542,6 @@ UecSink::UecSink(TrafficLogger* trafficLogger,
       _recvd_bytes(0),
       _rcv_cwnd_pen(255),
       _end_trigger(NULL),
-      _epsn_rx_bitmap(0),
       _out_of_order_count(0),
       _ack_request(false),
       _entropy(0) {
@@ -2654,7 +2657,7 @@ void UecSink::processData(UecDataPacket& pkt) {
             _receiver_cc->ecn_received(pkt.size());
     }
 
-    if (pkt.epsn() < _expected_epsn || _epsn_rx_bitmap[pkt.epsn()]) {
+    if (pkt.epsn() < _expected_epsn || _epsn_rx_bitmap.get(pkt.epsn())) {
         if (UecSrc::_debug)
             cout << _nodename << " src " << _src->nodename() << " duplicate psn " << pkt.epsn()
                  << endl;
@@ -2708,11 +2711,12 @@ void UecSink::processData(UecDataPacket& pkt) {
              << endl;
 
     if (pkt.epsn() == _expected_epsn) {
-        while (_epsn_rx_bitmap[++_expected_epsn]) {
+        while (_epsn_rx_bitmap.get(++_expected_epsn)) {
             // clean OOO state, this will wrap at some point.
-            _epsn_rx_bitmap[_expected_epsn] = 0;
+            _epsn_rx_bitmap.set(_expected_epsn, 0);
             _out_of_order_count--;
         }
+        _epsn_rx_bitmap.set_base(_expected_epsn);
         if (_src->debug())
             cout << " UecSink " << _nodename << " src " << _src->nodename()
                  << " >>    cumulative ack now: " << _expected_epsn << " ooo count "
@@ -2723,7 +2727,7 @@ void UecSink::processData(UecDataPacket& pkt) {
             _ack_request = false;
         }
     } else {
-        _epsn_rx_bitmap[pkt.epsn()] = 1;
+        _epsn_rx_bitmap.set(pkt.epsn(), 1);
         _out_of_order_count++;
         _stats.out_of_order++;
     }
@@ -2775,7 +2779,7 @@ void UecSink::processTrimmed(const UecDataPacket& pkt) {
         _receiver_cc->trimmed_received(is_last_hop);
     }
 
-    if (pkt.epsn() < _expected_epsn || _epsn_rx_bitmap[pkt.epsn()]) {
+    if (pkt.epsn() < _expected_epsn || _epsn_rx_bitmap.get(pkt.epsn())) {
         if (_src->debug())
             cout << " UecSink processTrimmed got a packet we already have: " << pkt.epsn()
                  << " time " << timeAsNs(getSrc()->eventlist().now()) << " flow"
@@ -2841,7 +2845,7 @@ void UecSink::processRts(const UecRtsPacket& pkt) {
     bool ecn = (bool)(pkt.flags() & ECN_CE);
     assert(!ecn); // not expecting ECN set on control packets
 
-    if (pkt.epsn() < _expected_epsn || _epsn_rx_bitmap[pkt.epsn()]) {
+    if (pkt.epsn() < _expected_epsn || _epsn_rx_bitmap.get(pkt.epsn())) {
         if (_src->debug())
             cout << _nodename << " src " << _src->nodename() << " duplicate RTS psn " << pkt.epsn()
                  << endl;
@@ -2861,11 +2865,12 @@ void UecSink::processRts(const UecRtsPacket& pkt) {
 
 
     if (pkt.epsn() == _expected_epsn) {
-        while (_epsn_rx_bitmap[++_expected_epsn]) {
+        while (_epsn_rx_bitmap.get(++_expected_epsn)) {
             // clean OOO state, this will wrap at some point.
-            _epsn_rx_bitmap[_expected_epsn] = 0;
+            _epsn_rx_bitmap.set(_expected_epsn, 0);
             _out_of_order_count--;
         }
+        _epsn_rx_bitmap.set_base(_expected_epsn);
         if (_src->debug())
             cout << " UecSink " << _nodename << " src " << _src->nodename()
                  << " >>    cumulative ack now: " << _expected_epsn << " ooo count "
@@ -2875,7 +2880,7 @@ void UecSink::processRts(const UecRtsPacket& pkt) {
             _ack_request = false;
         }
     } else {
-        _epsn_rx_bitmap[pkt.epsn()] = 1;
+        _epsn_rx_bitmap.set(pkt.epsn(), 1);
         _out_of_order_count++;
         _stats.out_of_order++;
     }
@@ -2984,8 +2989,8 @@ UecBasePacket::seq_t UecSink::sackBitmapBaseIdeal() {
     // it is the oldest packet that we are yet to sack. on sack bitmap construction that covers a
     // given seqno, the value is incremented.
     for (UecBasePacket::seq_t crt = _expected_epsn; crt <= _high_epsn; crt++)
-        if (_epsn_rx_bitmap[crt] && _epsn_rx_bitmap[crt] < lowest_value) {
-            lowest_value = _epsn_rx_bitmap[crt];
+        if (_epsn_rx_bitmap.get(crt) && _epsn_rx_bitmap.get(crt) < lowest_value) {
+            lowest_value = _epsn_rx_bitmap.get(crt);
             lowest_position = crt;
         }
 
@@ -3002,17 +3007,18 @@ uint64_t UecSink::buildSackBitmap(UecBasePacket::seq_t ref_epsn) {
     // take the next 64 entries from ref_epsn and create a SACK bitmap with them
     if (_src->debug())
         cout << " UecSink: building sack for ref_epsn " << ref_epsn << endl;
-    uint64_t bitmap = (uint64_t)(_epsn_rx_bitmap[ref_epsn] != 0) << 63;
+    uint64_t bitmap = (uint64_t)(_epsn_rx_bitmap.get(ref_epsn) != 0) << 63;
 
     for (int i = 1; i < 64; i++) {
-        bitmap = bitmap >> 1 | (uint64_t)(_epsn_rx_bitmap[ref_epsn + i] != 0) << 63;
-        if (_src->debug() && (_epsn_rx_bitmap[ref_epsn + i] != 0))
+        uint8_t sacked = _epsn_rx_bitmap.get(ref_epsn + i);
+        bitmap = bitmap >> 1 | (uint64_t)(sacked != 0) << 63;
+        if (_src->debug() && (sacked != 0))
             cout << "     Sack: " << ref_epsn + i << endl;
 
-        if (_epsn_rx_bitmap[ref_epsn + i]) {
+        if (sacked) {
             // remember that we sacked this packet
-            if (_epsn_rx_bitmap[ref_epsn + i] < UINT8_MAX)
-                _epsn_rx_bitmap[ref_epsn + i]++;
+            if (sacked < UINT8_MAX)
+                _epsn_rx_bitmap.set(ref_epsn + i, sacked + 1);
         }
     }
     if (_src->debug())
@@ -3049,14 +3055,8 @@ void UecSink::setEndTrigger(Trigger& end_trigger) {
 }*/
 
 uint32_t UecSink::reorder_buffer_size() {
-    uint32_t count = 0;
-    // it's not very efficient to count each time, but if we only do
-    // this occasionally when the sink logger runs, it should be OK.
-    for (uint32_t i = 0; i < uecMaxInFlightPkts; i++) {
-        if (_epsn_rx_bitmap[i])
-            count++;
-    }
-    return count;
+    // only the allocated part of the bitmap can hold non-zero entries
+    return _epsn_rx_bitmap.count_nonzero();
 }
 
 ////////////////////////////////////////////////////////////////

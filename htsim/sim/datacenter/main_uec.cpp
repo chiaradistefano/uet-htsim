@@ -44,7 +44,7 @@ uint32_t DEFAULT_NONTRIMMING_QUEUESIZE_FACTOR = 5;
 EventList eventlist;
 
 void exit_error(char* progr) {
-    cout << "Usage " << progr << " [-nodes N]\n\t[-cwnd cwnd_size]\n\t[-q queue_size]\n\t[-queue_type composite|random|lossless|lossless_input|]\n\t[-tm traffic_matrix_file]\n\t[-strat route_strategy (single,rand,perm,pull,ecmp,\n\tecmp_host path_count,ecmp_ar,ecmp_rr,\n\tecmp_host_ar ar_thresh)]\n\t[-log log_level]\n\t[-seed random_seed]\n\t[-end end_time_in_usec]\n\t[-mtu MTU]\n\t[-hop_latency x] per hop wire latency in us,default 1\n\t[-target_q_delay x] target_queuing_delay in us, default is 6us \n\t[-switch_latency x] switching latency in us, default 0\n\t[-host_queue_type  swift|prio|fair_prio]\n\t[-logtime dt] sample time for sinklogger, etc\n\t[-conn_reuse] enable connection reuse" << endl;
+    cout << "Usage " << progr << " [-nodes N]\n\t[-cwnd cwnd_size]\n\t[-q queue_size]\n\t[-queue_type composite|random|lossless|lossless_input|]\n\t[-tm traffic_matrix_file]\n\t[-strat route_strategy (single,rand,perm,pull,ecmp,\n\tecmp_host path_count,ecmp_ar,ecmp_rr,\n\tecmp_host_ar ar_thresh)]\n\t[-log log_level]\n\t[-seed random_seed]\n\t[-end end_time_in_usec]\n\t[-mtu MTU]\n\t[-hop_latency x] per hop wire latency in us,default 1\n\t[-target_q_delay x] target_queuing_delay in us, default is 6us \n\t[-switch_latency x] switching latency in us, default 0\n\t[-host_queue_type  swift|prio|fair_prio]\n\t[-logtime dt] sample time for sinklogger, etc\n\t[-conn_reuse] enable connection reuse\n\t[-stdout_file file] write stdout to file\n\t[-verbose] print per-flow setup/start messages" << endl;
     exit(1);
 }
 
@@ -67,6 +67,17 @@ uint32_t calculate_bdp_pkt(FatTreeTopologyCfg* t_cfg, linkspeed_bps host_linkspe
 }
 
 int main(int argc, char **argv) {
+    // -stdout_file: send everything printed on stdout to a file instead of
+    // the terminal. Done before anything else so that no output is missed.
+    for (int a = 1; a < argc - 1; a++) {
+        if (!strcmp(argv[a], "-stdout_file")) {
+            if (!freopen(argv[a+1], "w", stdout)) {
+                perror(argv[a+1]);
+                exit(1);
+            }
+        }
+    }
+
     Clock c(timeFromSec(5 / 100.), eventlist);
     bool param_queuesize_set = false;
     uint32_t queuesize_pkt = 0;
@@ -289,6 +300,11 @@ int main(int argc, char **argv) {
             }
             cout << "host queue_type "<< snd_type << endl;
             i++;
+        } else if (!strcmp(argv[i],"-stdout_file")) {
+            // already handled at the start of main
+            i++;
+        } else if (!strcmp(argv[i],"-verbose")) {
+            UecSrc::_verbose = true;
         } else if (!strcmp(argv[i],"-log")){
             if (!strcmp(argv[i+1], "flow_events")) {
                 log_flow_events = true;
@@ -1120,7 +1136,7 @@ int main(int argc, char **argv) {
     }
 
     if (log_packet){
-        LoggedPacket::dump_packets();
+        PacketManager::dump_packets();
     }
 
     cout << "Done" << endl;

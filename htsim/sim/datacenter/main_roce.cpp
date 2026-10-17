@@ -55,14 +55,25 @@ EventList eventlist;
 
 void exit_error(char* progr) {
 #ifdef DRAGONFLY_PLUS
-    cout << "Usage " << progr << "[-nodes N]\n\t[-size s|m|l]\n\t[-q queue_size]\n\t[-queue_type composite|random|lossless|lossless_input|]\n\t[-tm traffic_matrix_file]\n\t[-strat route_strategy (minimal,fpar)]\n\t[-log log_level]\n\t[-linkspeed linkspeed]\n\t[-seed random_seed]\n\t[-end end_time_in_usec]\n\t[-mtu MTU]\n\t[-s x] to set dragonfly+ parameters\n\t[-l x] to set dragonfly+ parameters\n\t[-h x] to set dragonfly+ parameters\n\t[-p x] to set dragonfly+ parameters\n\t[-hop_latency x] per hop wire latency in us,default 1\n\t[-switch_latency x] switching latency in us, default 0\n\t[-start_delta] time in us to randomly delay the start of connections\n\t[-pfc_thresholds low high]" << endl;
+    cout << "Usage " << progr << "[-nodes N]\n\t[-size s|m|l]\n\t[-q queue_size]\n\t[-queue_type composite|random|lossless|lossless_input|]\n\t[-tm traffic_matrix_file]\n\t[-strat route_strategy (minimal,fpar)]\n\t[-log log_level]\n\t[-linkspeed linkspeed]\n\t[-seed random_seed]\n\t[-end end_time_in_usec]\n\t[-mtu MTU]\n\t[-s x] to set dragonfly+ parameters\n\t[-l x] to set dragonfly+ parameters\n\t[-h x] to set dragonfly+ parameters\n\t[-p x] to set dragonfly+ parameters\n\t[-hop_latency x] per hop wire latency in us,default 1\n\t[-switch_latency x] switching latency in us, default 0\n\t[-start_delta] time in us to randomly delay the start of connections\n\t[-pfc_thresholds low high]\n\t[-stdout_file file] write stdout to file\n\t[-verbose] print per-flow setup/start messages" << endl;
 #else
-    cout << "Usage " << progr << " [-nodes N]\n\t[-q queue_size]\n\t[-queue_type composite|random|lossless|lossless_input|]\n\t[-tm traffic_matrix_file]\n\t[-strat route_strategy (single,\n\tecmp_host,ecmp_ar,\n\tecmp_host_ar ar_thresh)]\n\t[-log log_level]\n\t[-linkspeed linkspeed]\n\t[-seed random_seed]\n\t[-end end_time_in_usec]\n\t[-mtu MTU]\n\t[-hop_latency x] per hop wire latency in us,default 1\n\t[-switch_latency x] switching latency in us, default 0\n\t[-start_delta] time in us to randomly delay the start of connections\n\t[-pfc_thresholds low high]" << endl;
+    cout << "Usage " << progr << " [-nodes N]\n\t[-q queue_size]\n\t[-queue_type composite|random|lossless|lossless_input|]\n\t[-tm traffic_matrix_file]\n\t[-strat route_strategy (single,\n\tecmp_host,ecmp_ar,\n\tecmp_host_ar ar_thresh)]\n\t[-log log_level]\n\t[-linkspeed linkspeed]\n\t[-seed random_seed]\n\t[-end end_time_in_usec]\n\t[-mtu MTU]\n\t[-hop_latency x] per hop wire latency in us,default 1\n\t[-switch_latency x] switching latency in us, default 0\n\t[-start_delta] time in us to randomly delay the start of connections\n\t[-pfc_thresholds low high]\n\t[-stdout_file file] write stdout to file\n\t[-verbose] print per-flow setup/start messages" << endl;
 #endif
     exit(1);
 }
 
 int main(int argc, char **argv) {
+    // -stdout_file: send everything printed on stdout to a file instead of
+    // the terminal. Done before anything else so that no output is missed.
+    for (int a = 1; a < argc - 1; a++) {
+        if (!strcmp(argv[a], "-stdout_file")) {
+            if (!freopen(argv[a+1], "w", stdout)) {
+                perror(argv[a+1]);
+                exit(1);
+            }
+        }
+    }
+
     Clock c(timeFromSec(5 / 100.), eventlist);
     mem_b queuesize = DEFAULT_QUEUE_SIZE;
     linkspeed_bps linkspeed = speedFromMbps((double)HOST_NIC);
@@ -205,6 +216,11 @@ int main(int argc, char **argv) {
             }
             cout << "host queue_type "<< snd_type << endl;
             i++;
+        } else if (!strcmp(argv[i],"-stdout_file")) {
+            // already handled at the start of main
+            i++;
+        } else if (!strcmp(argv[i],"-verbose")) {
+            RoceSrc::_verbose = true;
         } else if (!strcmp(argv[i],"-log")){
             if (!strcmp(argv[i+1], "sink")) {
                 log_sink = true;
@@ -645,7 +661,8 @@ int main(int argc, char **argv) {
         connection* crt = all_conns->at(c);
         int src = crt->src;
         int dest = crt->dst;
-        cout << "Connection " << crt->src << "->" <<crt->dst << " starting at " << timeAsUs(crt->start) << " size " << crt->size << endl;
+        if (RoceSrc::_verbose)
+            cout << "Connection " << crt->src << "->" <<crt->dst << " starting at " << timeAsUs(crt->start) << " size " << crt->size << endl;
 
         if (dcqcn)
             roceSrc = new DCQCNSrc(NULL, NULL, eventlist, linkspeed);
@@ -807,7 +824,7 @@ int main(int argc, char **argv) {
     }
 
     if (log_packet){
-        LoggedPacket::dump_packets();
+        PacketManager::dump_packets();
     }
 
     cout << "Done" << endl;

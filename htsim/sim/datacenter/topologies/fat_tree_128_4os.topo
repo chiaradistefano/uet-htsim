@@ -10,7 +10,6 @@ Radix_Down 4
 Radix_Up 4
 Downlink_Latency_ns 1000
 Switch_Latency_ns 0
-
 Tier 1
 Oversubscribed 4
 Downlink_speed_Gbps 100
@@ -19,7 +18,6 @@ Radix_Up 1
 Downlink_Latency_ns 1000
 Switch_Latency_ns 0
 Bundle 1
-
 Tier 2
 Downlink_speed_Gbps 100
 Radix_Down 8

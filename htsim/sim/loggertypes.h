@@ -2,6 +2,8 @@
 #ifndef LOGGERTYPES_H
 #define LOGGERTYPES_H
 #include <vector>
+#include <cstdio>
+#include <cstdint>
 
 class Packet;
 class PacketFlow;
@@ -21,28 +23,18 @@ class MultipathTcpSrc;
 class Logfile;
 class RawLogEvent;
 class Logged;
-class LoggedPacket;
-
+// Packet-level telemetry (-log packet): each packet departure is written
+// straight to packets.csv as it happens, so memory use stays constant
+// instead of growing with the number of logged packets.
 class PacketManager{
 public:
-    PacketManager();
-    void add_packet(LoggedPacket* log_packet);
-    void dump_packets();
+    static void log_packet(const string& port, double timestamp_us, uint16_t size, uint64_t duration);
+    // flush and close packets.csv; call once at the end of the simulation
+    static void dump_packets();
 private:
-    vector<LoggedPacket*> _packets_list;
-};
-
-class LoggedPacket{
-public:
-    LoggedPacket(const string& port, const string& timestamp, const string& size, const string& duration) {_port=port; _timestamp=timestamp; _size=size; _duration=duration; _packet_manager.add_packet(this);}
-    virtual ~LoggedPacket() {}
-    string _port;
-    string _timestamp;
-    string _size;
-    string _duration;
-    static void dump_packets() {_packet_manager.dump_packets();}
-private:
-    static PacketManager _packet_manager;
+    static void open();
+    static FILE* _file;
+    static uint64_t _count;
 };
 
 // keep track of all logged items so we can do ID->Name mapping later

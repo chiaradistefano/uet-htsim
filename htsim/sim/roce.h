@@ -122,6 +122,7 @@ public:
     static uint32_t _global_node_count; 
     static uint32_t _global_rto_count;  // keep track of the total number of timeouts across all srcs
     static simtime_picosec _min_rto;
+    static bool _verbose;  // -verbose: print per-flow startflow/RESUME messages
 
     PacketFlow _flow;
 

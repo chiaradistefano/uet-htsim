@@ -31,10 +31,12 @@ class BaseQueue  : public EventSource, public PacketSink, public Drawable {
     virtual void setName(const string& name) {
         Logged::setName(name); 
         _nodename += name;
+        _log_port_name_valid = false;
     }
     virtual void forceName(const string& name) {
         Logged::setName(name); 
         _nodename = name;
+        _log_port_name_valid = false;
     }
 
     virtual void setSwitch(Switch* s){assert(!_switch);_switch = s;}
@@ -60,6 +62,8 @@ class BaseQueue  : public EventSource, public PacketSink, public Drawable {
     }
 
     virtual void log_packet_send(simtime_picosec duration);
+    // -log packet: record the departure of pkt in packets.csv
+    void log_packet_departure(Packet* pkt);
     virtual uint16_t average_utilization();
 
     virtual uint64_t quantized_queuesize();
@@ -88,6 +92,10 @@ protected:
     uint8_t _last_qs, _last_utilization;
 
     Switch* _switch;//which switch is this queue part of?
+
+    // port name written by log_packet_departure, parsed once from _nodename
+    string _log_port_name;
+    bool _log_port_name_valid = false;
 };
 
 

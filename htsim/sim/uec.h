@@ -13,6 +13,7 @@
 #include "uecpacket.h"
 #include "circular_buffer.h"
 #include "modular_vector.h"
+#include "reorder_bitmap.h"
 #include "pciemodel.h"
 #include "oversubscribed_cc.h"
 #include "uec_mp.h"
@@ -234,6 +235,7 @@ public:
     inline flowid_t flowId() const { return _flow.flow_id(); }
 
     static bool _debug;
+    static bool _verbose;  // -verbose: print per-flow NSCC/RCCC init parameters
     static bool _shown;
     bool _debug_src;
     bool debug() const { return _debug_src; }
@@ -658,7 +660,7 @@ class UecSink : public DataReceiver {
     uint8_t _rcv_cwnd_pen;
 
     Trigger* _end_trigger;
-    ModularVector<uint8_t, uecMaxInFlightPkts>
+    ReorderBitmap<uecMaxInFlightPkts>
         _epsn_rx_bitmap;  // list of packets above a hole, that we've received
 
     uint32_t _out_of_order_count;

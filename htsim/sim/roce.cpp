@@ -20,6 +20,7 @@ using namespace std;
 //#define LOGSINK 2332
 #define LOGSINK   0 
 bool RoceSink::ooo_enabled = false;
+bool RoceSrc::_verbose = false;
 
 
 /* keep track of RTOs.  Generally, we shouldn't see RTOs if
@@ -105,7 +106,8 @@ void RoceSrc::log_me() {
 }
 
 void RoceSrc::startflow(){
-    cout << "startflow " << _flow._name << " at " << timeAsUs(eventlist().now()) << endl;
+    if (_verbose)
+        cout << "startflow " << _flow._name << " at " << timeAsUs(eventlist().now()) << endl;
     _flow_started = true;
     _highest_sent = 0;
     _last_acked = 0;
@@ -226,7 +228,8 @@ void RoceSrc::processPause(const EthPausePacket& p) {
         //we are allowed to send!
         //assert(_state_send != READY);
         _state_send = READY;
-        cout << "Source " << str() << " RESUME " << timeAsUs(eventlist().now()) << endl;
+        if (_verbose)
+            cout << "Source " << str() << " RESUME " << timeAsUs(eventlist().now()) << endl;
         eventlist().sourceIsPendingRel(*this,0);
     }
 }

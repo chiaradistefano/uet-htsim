@@ -12,6 +12,7 @@ idmap.txt
 **/validation/**/*.cm
 *.pdf
 *.png
+*.cm
 !example_validate.json
 build/
 *.txt

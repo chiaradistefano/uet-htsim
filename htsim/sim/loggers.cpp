@@ -1,29 +1,40 @@
 // -*- c-basic-offset: 4; indent-tabs-mode: nil -*-        
 #include <iostream>
 #include <iomanip>
+#include <cinttypes>
 #include "loggers.h"
 #include "eqds_logger.h"
 
-PacketManager::PacketManager() {};
+FILE* PacketManager::_file = NULL;
+uint64_t PacketManager::_count = 0;
 
-void PacketManager::add_packet(LoggedPacket* log_packet){
-    _packets_list.push_back(log_packet);
+void PacketManager::open(){
+    _file = fopen("packets.csv", "w");
+    if (!_file) {
+        perror("Cannot open packets.csv");
+        abort();
+    }
+    // large buffer: one write() every few MB instead of one per packet
+    setvbuf(_file, NULL, _IOFBF, 1 << 22);
+}
+
+void PacketManager::log_packet(const string& port, double timestamp_us, uint16_t size, uint64_t duration){
+    if (!_file)
+        open();
+    // same format as the previous to_string() based version: %f for the
+    // timestamp, plain integers for size and duration
+    fprintf(_file, "%s,%f,%d,%" PRIu64 "\n", port.c_str(), timestamp_us, (int)size, duration);
+    _count++;
 }
 
 void PacketManager::dump_packets(){
-    cout<<"Writing log of "<<_packets_list.size()<<" packets"<<endl;
-    std::ostringstream oss;
-    for (const auto& log : _packets_list) {
-        oss << log->_port << "," << log->_timestamp << "," << log->_size << "," << log->_duration << "\n";
-    }
-
-    std::ofstream fout("packets.csv");
-    fout<<oss.str();
-    fout.close();
+    cout<<"Writing log of "<<_count<<" packets"<<endl;
+    if (!_file)
+        open();  // still create an (empty) packets.csv if nothing was logged
+    fclose(_file);
+    _file = NULL;
     cout<<"Writing completed!"<<endl;
 }
-
-PacketManager LoggedPacket::_packet_manager;
 
 
 // LoggedManager is a way to keep track of all the Logged instances
